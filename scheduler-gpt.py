@@ -138,36 +138,45 @@ def sjf_scheduling(process_list, runtime):
     ready_queue = []
     process_list.sort(key=lambda p: p.arrival)  # Sort by arrival time
     current_process = None
+    notburst_flag = True
+    already_arrived = False
     
     while time < runtime:
-        # Add new arrivals to the ready queue
-        for process in process_list:
-            if process.arrival == time:
-                log.append(f"Time {time}: {process.name} arrived")
-                ready_queue.append(process)
-        
-        # Sort ready queue by remaining time
-        ready_queue.sort(key=lambda p: p.remaining_time)
+        if already_arrived:
+             already_arrived = False
+        else:
+            process_arrived(process_list, log, time, ready_queue)
         
         if current_process and current_process.remaining_time > 0:
             ready_queue.append(current_process)
 
+        # Sort ready queue by remaining time
+        ready_queue.sort(key=lambda p: p.remaining_time)
+
         if ready_queue:
-            current_process = ready_queue.pop(0)
+            next_process = ready_queue.pop(0)
+            if current_process != next_process:
+                notburst_flag = True
+            current_process = next_process
             if current_process.start_time == -1:
                 current_process.start_time = time
             
-            log.append(f"Time {time}: {current_process.name} selected (burst   {current_process.remaining_time})")
+            if notburst_flag:
+                log.append(f"Time{sapce_size(time)}{time} : {current_process.name} selected (burst{sapce_size(current_process.remaining_time)}{current_process.remaining_time})")
+                notburst_flag = False
             current_process.remaining_time -= 1
             
             if current_process.remaining_time == 0:
                 current_process.finish_time = time + 1
-                log.append(f"Time {time + 1}: {current_process.name} finished")
+                process_arrived(process_list, log, time+1, ready_queue)
+                already_arrived = True
+                log.append(f"Time{sapce_size(time)}{time + 1} : {current_process.name} finished")
         else:
-            log.append(f"Time {time}: Idle")
+            log.append(f"Time{sapce_size(time)}{time} : Idle")
         
         time += 1
 
+    log.append(f"Finished at time  {time}")
     return log
 
 # Function to simulate Round Robin (RR)
