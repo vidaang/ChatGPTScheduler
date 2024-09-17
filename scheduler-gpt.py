@@ -176,6 +176,10 @@ def sjf_scheduling(process_list, runtime):
         
         time += 1
 
+    # Handle processes that did not finish within the runtime
+    for process in ready_queue:
+        log.append(f"{process.name} did not finish")
+        
     log.append(f"Finished at time  {time}")
     return log
 
@@ -228,6 +232,10 @@ def round_robin_scheduling(process_list, runtime, quantum):
             log.append(f"Time{sapce_size(time)}{time} : Idle")
         
         time += 1
+
+    # Handle processes that did not finish within the runtime
+    for process in ready_queue:
+        log.append(f"{process.name} did not finish")
 
     log.append(f"Finished at time  {time}")
 
