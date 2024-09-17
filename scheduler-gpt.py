@@ -52,28 +52,83 @@ def parse_input(file_name):
         print(f"Error: File {file_name} not found.")
         sys.exit(1)
 
+def sapce_size(time):
+    space = "   "
+    size = len(space)
+    count = 10
+
+    if (time >= count):
+        space = space[:(size-1)]
+    
+    if (time > count*count):
+        space = space[:(size-1)]
+
+    return space
+
+def sapce_size_process_count(time):
+    space = "  "
+    size = len(space)
+    count = 10
+
+    if (time >= count):
+        space = space[:(size-1)]
+    
+    if (time > count*count):
+        space = space[:(size-1)]
+
+    return space
+
+def process_arrived(process_list, log, time, ready_queue):
+     # Add any arriving processes to the ready queue
+     for process in process_list:
+         if process.arrival == time:
+             log.append(f"Time{sapce_size(time)}{time} : {process.name} arrived")
+             ready_queue.append(process)
+             
+
 # Function to simulate First In, First Out (FIFO)
-def fifo_scheduling(process_list, runtime):
-    process_list.sort(key=lambda p: p.arrival)  # Sort processes by arrival time
+def fcfs_scheduling(process_list, runtime):
     time = 0
     log = []
+    ready_queue = []
+    process_list.sort(key=lambda p: p.arrival)  # Sort processes by arrival time
+    current_process = None
+    already_arrived = False
     
-    for process in process_list:
-        if time < process.arrival:
-            log.append(f"Time {time}: Idle")
-            time = process.arrival
-        
-        process.start_time = time
-        log.append(f"Time {time}: {process.name} selected (burst {process.burst})")
-        
-        time += process.burst
-        process.finish_time = time
-        log.append(f"Time {time}: {process.name} finished")
-
     while time < runtime:
-        log.append(f"Time {time}: Idle")
+        if already_arrived:
+             already_arrived = False
+        else:
+            process_arrived(process_list, log, time, ready_queue)
+
+        # If no process is currently running, select the next one from the ready queue
+        if current_process is None and ready_queue:
+            current_process = ready_queue.pop(0)
+            current_process.start_time = time
+            log.append(f"Time{sapce_size(time)}{time} : {current_process.name} selected (burst{sapce_size(current_process.remaining_time)}{current_process.burst})")
+        
+        # If there is a current process, simulate its execution
+        if current_process:
+            current_process.remaining_time -= 1
+            if current_process.remaining_time == 0:
+                current_process.finish_time = time + 1
+                process_arrived(process_list, log, time+1, ready_queue)
+                already_arrived = True
+                log.append(f"Time{sapce_size(time)}{time + 1} : {current_process.name} finished")
+                current_process = None  # Process finished, no current process
+        
+        # If no process is selected, print Idle
+        elif current_process is None and not ready_queue:
+            log.append(f"Time{sapce_size(time)}{time} : Idle")
+
         time += 1
 
+    # Handle processes that did not finish within the runtime
+    for process in ready_queue:
+        log.append(f"{process.name} did not finish")
+
+    log.append(f"Finished at time  {time}")
+    
     return log
 
 # Function to simulate Preemptive Shortest Job First (SJF)
@@ -102,7 +157,7 @@ def sjf_scheduling(process_list, runtime):
             if current_process.start_time == -1:
                 current_process.start_time = time
             
-            log.append(f"Time {time}: {current_process.name} selected (burst {current_process.remaining_time})")
+            log.append(f"Time {time}: {current_process.name} selected (burst   {current_process.remaining_time})")
             current_process.remaining_time -= 1
             
             if current_process.remaining_time == 0:
@@ -123,13 +178,14 @@ def round_robin_scheduling(process_list, runtime, quantum):
     process_list.sort(key=lambda p: p.arrival)  # Sort by arrival time
     current_process = None
     q_time = 0  # Quantum counter
+    notburst_flag = True
+    already_arrived = False
     
     while time < runtime:
-        # Add new arrivals to the ready queue
-        for process in process_list:
-            if process.arrival == time:
-                log.append(f"Time {time}: {process.name} arrived")
-                ready_queue.append(process)
+        if already_arrived:
+             already_arrived = False
+        else:
+            process_arrived(process_list, log, time, ready_queue)
         
         if current_process is not None and q_time == quantum:
             if current_process.remaining_time > 0:
@@ -140,33 +196,46 @@ def round_robin_scheduling(process_list, runtime, quantum):
         if not current_process and ready_queue:
             current_process = ready_queue.pop(0)
             q_time = 0
+            notburst_flag = True
             if current_process.start_time == -1:
                 current_process.start_time = time
             
         if current_process:
-            log.append(f"Time {time}: {current_process.name} selected (burst {current_process.remaining_time})")
+            if notburst_flag:
+                log.append(f"Time{sapce_size(time)}{time} : {current_process.name} selected (burst{sapce_size(current_process.remaining_time)}{current_process.remaining_time})")
+                notburst_flag = False
             current_process.remaining_time -= 1
             q_time += 1
 
             if current_process.remaining_time == 0:
                 current_process.finish_time = time + 1
-                log.append(f"Time {time + 1}: {current_process.name} finished")
+                process_arrived(process_list, log, time+1, ready_queue)
+                already_arrived = True
+                log.append(f"Time{sapce_size(time)}{time + 1} : {current_process.name} finished")
                 current_process = None
                 q_time = 0
+                
         else:
-            log.append(f"Time {time}: Idle")
+            log.append(f"Time{sapce_size(time)}{time} : Idle")
         
         time += 1
 
+    log.append(f"Finished at time  {time}")
+
     return log
+
 
 # Function to calculate turnaround time, waiting time, and response time
 def calculate_times(process_list):
+    times_log = []
+    process_list.sort(key=lambda p: p.name)
+
     for process in process_list:
         turnaround_time = process.finish_time - process.arrival
         waiting_time = turnaround_time - process.burst
         response_time = process.start_time - process.arrival
-        print(f"{process.name}: wait {waiting_time} turnaround {turnaround_time} response {response_time}")
+        times_log.append(f"{process.name} wait{sapce_size(waiting_time)}{waiting_time} turnaround{sapce_size(turnaround_time)}{turnaround_time} response{sapce_size(response_time)}{response_time}")
+    return times_log
 
 # Main function to handle input and scheduling selection
 def main():
@@ -180,26 +249,38 @@ def main():
         print(f"Error: Input file {input_file} must have '.in' extension")
         sys.exit(1)
 
+    output_file = input_file.replace(".in", ".out")
+
     process_list, runtime, algorithm, quantum = parse_input(input_file)
 
-    print(f"{len(process_list)} processes")
-    print(f"Using {algorithm.upper()}")
+    log = []
+    log.append(f"{sapce_size_process_count(len(process_list))}{len(process_list)} processes")
     
-    if algorithm == 'fifo':
-        log = fifo_scheduling(process_list, runtime)
+    if algorithm == 'fcfs':
+        log.append("Using First-Come First-Served")
+        log.extend(fcfs_scheduling(process_list, runtime))
+
     elif algorithm == 'sjf':
-        log = sjf_scheduling(process_list, runtime)
+        log.append("Using preemptive Shortest Job First")
+        log.extend(sjf_scheduling(process_list, runtime))
+
     elif algorithm == 'rr':
-        print(f"Quantum {quantum}")
-        log = round_robin_scheduling(process_list, runtime, quantum)
+        log.append("Using Round-Robin")
+        log.append(f"Quantum   {quantum}\n")
+        log.extend(round_robin_scheduling(process_list, runtime, quantum))
+        
     else:
         print(f"Error: Unknown algorithm {algorithm}")
         sys.exit(1)
     
-    for entry in log:
-        print(entry)
-    
-    calculate_times(process_list)
+    log.append("")
+    times_log = calculate_times(process_list)
+    log.extend(times_log)
+
+    # Write log to the output file
+    with open(output_file, 'w') as out:
+        for entry in log:
+            out.write(entry + '\n')
 
 if __name__ == "__main__":
     main()
