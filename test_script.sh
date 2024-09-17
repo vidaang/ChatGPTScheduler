@@ -12,7 +12,7 @@ for i in "${!INPUT_FILES[@]}"; do
     OUTPUT_FILE=${OUTPUT_FILES[$i]}
 
     python3 "$SCHEDULER_SCRIPT" "$INPUT_FILE"
-    
+
     # Check if the generated output matches the expected output
     if diff "$OUTPUT_FILE" "$EXP_OUTPUT_FILE" > /dev/null; then
         echo "Test $i Passed for $INPUT_FILE: Output matches expected output."
@@ -22,4 +22,10 @@ for i in "${!INPUT_FILES[@]}"; do
     fi
 
     echo "-----------------------------"
+done
+
+for OUTPUT_FILE in "${OUTPUT_FILES[@]}"; do
+    if [ -f "$OUTPUT_FILE" ]; then
+        rm "$OUTPUT_FILE"
+    fi
 done
