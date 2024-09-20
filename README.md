@@ -6,7 +6,7 @@ Created a program to imitate 3 scheduler algorithms
 - Shortest Job First
 - Round Robin
 
-#### Team Members
+## Team Members
 - Edward Weir
 - Vi Dang
 - Bao Huynh
